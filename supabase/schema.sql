@@ -7,8 +7,6 @@ create table if not exists public.repair_requests (
   name text not null check (length(name) between 1 and 80),
   phone text not null check (length(phone) between 7 and 30),
   email text,
-  youtube_channel text not null check (length(youtube_channel) between 1 and 100),
-  youtube_subscriber_verified boolean not null default false,
   address text not null check (length(address) between 1 and 500),
   contact_by_email boolean not null default false,
   battery_details text not null default '' check (length(battery_details) <= 4000),
@@ -48,7 +46,6 @@ begin
   if coalesce(length(payload->>'name'),0) not between 1 and 80
      or coalesce(length(payload->>'phone'),0) not between 7 and 30
      or coalesce(length(payload->>'address'),0) not between 1 and 500
-     or coalesce(length(payload->>'youtube_channel'),0) not between 1 and 100
      or coalesce(length(payload->>'battery_details'),0) not between 1 and 4000
      or coalesce(length(payload->>'symptoms'),0) not between 1 and 4000
      or payload->>'repair_option' not in ('수리','리필','점검 후 가능한 작업')
@@ -56,8 +53,8 @@ begin
     raise exception 'invalid request';
   end if;
   if coalesce((payload->>'contact_by_email')::boolean,false) and coalesce(length(payload->>'email'),0)=0 then raise exception 'email required'; end if;
-  insert into public.repair_requests(name,phone,email,youtube_channel,address,contact_by_email,battery_details,symptoms,repair_option,extra_request,privacy_consent)
-  values (payload->>'name',payload->>'phone',nullif(payload->>'email',''),payload->>'youtube_channel',payload->>'address',(payload->>'contact_by_email')::boolean,payload->>'battery_details',payload->>'symptoms',payload->>'repair_option',nullif(payload->>'extra_request',''),true)
+  insert into public.repair_requests(name,phone,email,address,contact_by_email,battery_details,symptoms,repair_option,extra_request,privacy_consent)
+  values (payload->>'name',payload->>'phone',nullif(payload->>'email',''),payload->>'address',(payload->>'contact_by_email')::boolean,payload->>'battery_details',payload->>'symptoms',payload->>'repair_option',nullif(payload->>'extra_request',''),true)
   returning id into new_id;
   return new_id;
 end; $$;
