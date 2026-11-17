@@ -55,7 +55,7 @@ function RequestForm(){
 
 function mailReplyHref(r: RequestRow) {
  const batteryText=r.battery_details||(r.batteries||[]).map(b=>[b.brand,b.voltage,b.capacity,b.model,b.quantity>1?b.quantity+'개':''].filter(Boolean).join(' ')).join(', ')||'기재 없음';
- const body=[r.name+'님, 안녕하세요.','','배터리 수리 의뢰를 확인했습니다.','배터리: '+batteryText.slice(0,500),'요청 작업: '+r.repair_option,'증상: '+r.symptoms.slice(0,500),'','수리 가능 여부와 예상 비용을 확인한 뒤 다시 안내드리겠습니다.','','배터리스트 메이데이'].join('\\n');
+ const body=[r.name+'님, 안녕하세요.','','배터리 수리 의뢰를 확인했습니다.','배터리: '+batteryText.slice(0,500),'요청 작업: '+r.repair_option,'증상: '+r.symptoms.slice(0,500),'','수리 가능 여부와 예상 비용을 확인한 뒤 다시 안내드리겠습니다.','','배터리스트 메이데이'].join('\n');
  return 'mailto:'+r.email+'?subject='+encodeURIComponent('배터리 수리 의뢰 답변 - '+r.name)+'&body='+encodeURIComponent(body);
 }
 function Admin(){
