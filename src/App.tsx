@@ -1,19 +1,40 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { Battery, Plus, Trash2, Wrench, Search, LogOut, ShieldCheck, ClipboardCheck, LoaderCircle } from 'lucide-react';
+import { Battery, Plus, Trash2, Wrench, Search, LogOut, ShieldCheck, ClipboardCheck, LoaderCircle, KeyRound } from 'lucide-react';
 
 type BatteryItem = { brand: string; model: string; voltage: string; capacity: string; quantity: number };
 type RequestRow = { id: string; created_at: string; name: string; phone: string; email: string | null; address: string; contact_by_email: boolean; symptoms: string; repair_option: string; extra_request: string | null; status: string; repair_cost: number | null; admin_note: string | null; batteries: BatteryItem[] };
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 const db: SupabaseClient | null = url && key ? createClient(url, key) : null;
+const ADMIN_EMAIL = 'maydaycom030@gmail.com';
 const emptyBattery = (): BatteryItem => ({ brand: '', model: '', voltage: '', capacity: '', quantity: 1 });
 const statuses = ['접수', '답장완료', '수리중', '수리완료'];
 
+type Page = 'request' | 'admin' | 'setup';
+function routeFromHash(): Page {
+  const params = new URLSearchParams(location.hash.replace(/^#/, ''));
+  if (params.has('error_code') || params.get('type') === 'invite' || params.get('type') === 'recovery' || params.has('access_token')) return 'setup';
+  return location.hash === '#admin' ? 'admin' : 'request';
+}
+
 export default function App() {
-  const [page, setPage] = useState<'request'|'admin'>(() => location.hash === '#admin' ? 'admin' : 'request');
-  useEffect(() => { const onHash=()=>setPage(location.hash==='#admin'?'admin':'request'); window.addEventListener('hashchange',onHash); return()=>window.removeEventListener('hashchange',onHash); }, []);
-  return <main className="shell"><header className="top"><a href="#" className="brand"><span className="brandmark"><Battery size={21}/></span><span>메이데이컴퓨터<small>배터리 수리·리필 의뢰</small></span></a><a className="admin-link" href="#admin"><ShieldCheck size={16}/> 관리자</a></header>{page==='admin'?<Admin/>:<RequestForm/>}<footer>메이데이컴퓨터 · 배터리 수리 및 리필 상담</footer></main>
+  const [page, setPage] = useState<Page>(routeFromHash);
+  useEffect(() => { const onHash=()=>setPage(routeFromHash()); window.addEventListener('hashchange',onHash); return()=>window.removeEventListener('hashchange',onHash); }, []);
+  return <main className="shell"><header className="top"><a href="#" className="brand"><span className="brandmark"><Battery size={21}/></span><span>메이데이컴퓨터<small>배터리 수리·리필 의뢰</small></span></a>{page!=='setup'&&<a className="admin-link" href="#admin"><ShieldCheck size={16}/> 관리자</a>}</header>{page==='setup'?<PasswordSetup/>:page==='admin'?<Admin/>:<RequestForm/>}<footer>메이데이컴퓨터 · 배터리 수리 및 리필 상담</footer></main>
+}
+
+function PasswordSetup(){
+ const [session,setSession]=useState<boolean|null>(null); const [password,setPassword]=useState(''); const [confirm,setConfirm]=useState(''); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [saved,setSaved]=useState(false);
+ const params=new URLSearchParams(location.hash.replace(/^#/,'')); const expired=params.get('error_code')==='otp_expired';
+ useEffect(()=>{if(!db){setSession(false);return;} db.auth.getSession().then(({data})=>setSession(!!data.session)); const {data:{subscription}}=db.auth.onAuthStateChange((_event,s)=>setSession(!!s)); return()=>subscription.unsubscribe();},[]);
+ async function savePassword(e:React.FormEvent){e.preventDefault();setError('');if(password.length<8){setError('비밀번호를 8자 이상 입력해주세요.');return;}if(password!==confirm){setError('비밀번호가 서로 다릅니다.');return;}if(!db){setError('Supabase 연결 설정이 필요합니다.');return;}setBusy(true);const {error}=await db.auth.updateUser({password});setBusy(false);if(error){setError('비밀번호를 저장하지 못했습니다. 초대 링크가 유효한지 확인해주세요.');return;}setSaved(true);window.history.replaceState(null,'',window.location.pathname+window.location.search);window.location.hash='admin';}
+ if(!db)return <section className="card admin-login"><h1>초대 설정</h1><p>Supabase 환경 설정이 필요합니다.</p></section>;
+ if(expired)return <section className="card admin-login"><div className="eyebrow"><KeyRound size={14}/> 초대 링크</div><h1>초대 링크가 만료됐습니다</h1><p>새 초대 링크를 받은 뒤 다시 열어주세요.</p><a className="secondary" href="#admin">관리자 로그인으로</a></section>;
+ if(session===null)return <section className="card admin-login">초대 확인 중…</section>;
+ if(!session)return <section className="card admin-login"><div className="eyebrow"><KeyRound size={14}/> 초대 확인</div><h1>유효한 초대가 필요합니다</h1><p>이메일 초대 링크를 다시 열어주세요.</p></section>;
+ if(saved)return <section className="card admin-login"><h1>비밀번호 설정 완료</h1><p>관리자 화면으로 이동합니다.</p></section>;
+ return <section className="card admin-login"><div className="eyebrow"><KeyRound size={14}/> ADMIN ACCOUNT</div><h1>관리자 비밀번호 설정</h1><p>{ADMIN_EMAIL} 계정에서 사용할 비밀번호를 정해주세요.</p><form onSubmit={savePassword}><Field label="새 비밀번호" required><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={e=>setPassword(e.target.value)} required/></Field><Field label="비밀번호 확인" required><input type="password" autoComplete="new-password" minLength={8} value={confirm} onChange={e=>setConfirm(e.target.value)} required/></Field>{error&&<div className="error" role="alert">{error}</div>}<button className="primary submit" disabled={busy}>{busy?'저장 중…':'비밀번호 저장'}</button></form></section>;
 }
 
 function RequestForm(){
@@ -34,8 +55,8 @@ function RequestForm(){
 }
 
 function Admin(){
- const [session,setSession]=useState<boolean|null>(null),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[rows,setRows]=useState<RequestRow[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[filter,setFilter]=useState('전체'),[search,setSearch]=useState('');
- useEffect(()=>{if(!db)return;db.auth.getSession().then(({data})=>setSession(!!data.session));const {data:{subscription}}=db.auth.onAuthStateChange((_e,s)=>{setSession(!!s);});return()=>subscription.unsubscribe();},[]);
+ const [session,setSession]=useState<boolean|null>(null),[userEmail,setUserEmail]=useState(''),[email,setEmail]=useState(ADMIN_EMAIL),[password,setPassword]=useState(''),[rows,setRows]=useState<RequestRow[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[filter,setFilter]=useState('전체'),[search,setSearch]=useState('');
+ useEffect(()=>{if(!db)return;db.auth.getSession().then(({data})=>{setSession(!!data.session);setUserEmail(data.session?.user.email||'');});const {data:{subscription}}=db.auth.onAuthStateChange((_e,s)=>{setSession(!!s);setUserEmail(s?.user.email||'');});return()=>subscription.unsubscribe();},[]);
  async function signIn(e:React.FormEvent){e.preventDefault();setError('');if(!db)return;const {error}=await db.auth.signInWithPassword({email,password});if(error)setError('로그인에 실패했습니다. 관리자 계정을 확인해주세요.');else{setPassword('');await load();}}
  async function load(){if(!db)return;setLoading(true);const {data,error}=await db.from('repair_requests').select('*,batteries:repair_batteries(*)').order('created_at',{ascending:false}).limit(500);if(error)setError('목록을 불러오지 못했습니다. 관리자 권한을 확인해주세요.');else setRows((data||[]) as RequestRow[]);setLoading(false);}
  useEffect(()=>{if(session)void load();},[session]);
@@ -45,6 +66,7 @@ function Admin(){
  if(!db)return <section className="card admin-login"><h1>관리자 로그인</h1><p>Supabase 환경 설정이 필요합니다.</p></section>;
  if(session===null)return <section className="card admin-login">확인 중…</section>;
  if(!session)return <section className="card admin-login"><div className="eyebrow"><ShieldCheck size={14}/> SECURE ADMIN</div><h1>관리자 로그인</h1><p>등록된 관리자 계정으로 로그인하세요.</p><form onSubmit={signIn}><Field label="이메일"><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></Field><Field label="비밀번호"><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></Field>{error&&<div className="error">{error}</div>}<button className="primary submit">로그인</button></form></section>;
+ if(userEmail.toLowerCase()!==ADMIN_EMAIL)return <section className="card admin-login"><h1>관리자 계정이 아닙니다</h1><p>등록된 관리자 이메일로 로그인해주세요.</p><button className="secondary" onClick={()=>void db?.auth.signOut()}>로그아웃</button></section>;
  return <section className="admin"><div className="admin-title"><div><div className="eyebrow"><ShieldCheck size={14}/> MAYDAY ADMIN</div><h1>수리 의뢰 관리</h1><p>고객별 배터리와 작업 상태를 관리합니다.</p></div><button className="secondary" onClick={logout}><LogOut size={16}/> 로그아웃</button></div><div className="toolbar"><label className="search"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="고객·연락처·배터리 검색"/></label><select value={filter} onChange={e=>setFilter(e.target.value)}>{['전체',...statuses].map(s=><option key={s}>{s}</option>)}</select><button className="secondary" onClick={()=>void load()}>새로고침</button></div>{error&&<div className="error">{error}</div>}{loading?<p className="empty">불러오는 중…</p>:filtered.length===0?<p className="empty">표시할 의뢰가 없습니다.</p>:<div className="request-list">{filtered.map(r=><article className="request-card" key={r.id}><div className="request-top"><div><span className="date">{new Date(r.created_at).toLocaleString('ko-KR')}</span><h2>{r.name} <small>{r.phone}</small></h2><p>{r.address}</p>{r.email&&<p>{r.email} · 이메일 연락 {r.contact_by_email?'동의':'미동의'}</p>}</div><select className="status-select" value={r.status} onChange={e=>void change(r.id,'status',e.target.value)}>{statuses.map(s=><option key={s}>{s}</option>)}</select></div><div className="request-batteries">{(r.batteries||[]).map((b,i)=><div key={i}><Battery size={15}/><span><b>{[b.brand,b.model].filter(Boolean).join(' ')||'배터리 정보 없음'}</b><small>{[b.voltage,b.capacity].filter(Boolean).join(' · ')} · {b.quantity}개</small></span></div>)}</div><div className="detail"><b>{r.repair_option}</b><p>{r.symptoms}</p>{r.extra_request&&<p className="extra">추가 요청: {r.extra_request}</p>}</div><div className="admin-edit"><label>수리비<input type="number" min="0" value={r.repair_cost??''} placeholder="원" onChange={e=>setRows(a=>a.map(x=>x.id===r.id?{...x,repair_cost:e.target.value===''?null:Number(e.target.value)}:x))} onBlur={e=>void change(r.id,'repair_cost',e.target.value===''?null:Number(e.target.value))}/><span>원</span></label><label className="note-label">관리 메모<textarea rows={2} value={r.admin_note||''} placeholder="내부 메모" onChange={e=>setRows(a=>a.map(x=>x.id===r.id?{...x,admin_note:e.target.value}:x))} onBlur={e=>void change(r.id,'admin_note',e.target.value||null)}/></label></div></article>)}</div>}</section>
 }
 function Section({title,caption,children}:{title:string;caption:string;children:React.ReactNode}){return <section className="form-section"><div className="section-title"><h2>{title}</h2><p>{caption}</p></div>{children}</section>}
