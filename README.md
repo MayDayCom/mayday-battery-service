@@ -1,10 +1,10 @@
 # MayDay Battery Service
 
-PC와 모바일에서 사용하는 메이데이컴퓨터 배터리 수리 의뢰서와 관리자 화면입니다. 기존 Google Forms 항목(성함, 연락처, 이메일 연락 선택, 주소, 배터리·증상, 수리/리필 선택, 추가 요청, 개인정보 동의)을 유지합니다. 우편번호는 받지 않습니다. 배터리 정보를 종류별로 여러 줄 추가하고 수량을 지정할 수 있습니다.
+PC와 모바일에서 사용하는 메이데이컴퓨터 배터리 수리 의뢰서와 관리자 화면입니다. 기존 Google Forms 항목(성함, 연락처, 이메일 연락 선택, 주소, 배터리·증상, 수리/리필 선택, 추가 요청, 개인정보 동의)을 유지합니다. 우편번호는 받지 않습니다. 배터리 정보는 제조사·전압·용량·모델명·수량을 한 입력란에 자유롭게 적습니다.
 
 ## Supabase 연결
 
-1. Supabase 프로젝트를 준비하고 SQL Editor에서 `supabase/schema.sql`을 실행합니다.
+1. 새 Supabase DB에는 `supabase/schema.sql`을 실행합니다. 기존 DB에는 `supabase/migration_battery_details.sql`을 한 번 실행합니다.
 2. 현재 연결 프로젝트는 `https://wfisyxxlrxwdzfztgrmm.supabase.co`입니다. `.env.example`의 URL과 publishable key를 사용하세요.
 3. 관리자는 `maydaycom030@gmail.com`으로 제한됩니다. Supabase Auth 초대 링크를 열고 앱의 비밀번호 설정 화면에서 암호를 만듭니다.
 4. `npm install` 후 `npm run dev`로 실행합니다. `npm run build`로 정적 배포 파일을 생성합니다.
