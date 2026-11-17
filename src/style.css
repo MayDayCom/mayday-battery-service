@@ -8,3 +8,6 @@
 
 .top-links{display:flex;align-items:center;gap:12px}.channel-link{display:inline-flex;align-items:center;gap:5px;color:#bd2027;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap}.channel-link:hover{text-decoration:underline}
 @media(max-width:420px){.top-links{gap:8px}.channel-link,.admin-link{font-size:11px}.brand{gap:8px}.brandmark{width:34px;height:34px}}
+
+.subscriber-banner{display:inline-flex;align-items:center;justify-content:center;margin-top:14px;padding:7px 14px;border-radius:999px;background:#e53935;color:#fff;font-size:17px;font-weight:800;letter-spacing:-.02em;box-shadow:0 3px 10px #0002}
+@media(max-width:600px){.subscriber-banner{font-size:16px;padding:7px 13px}}
