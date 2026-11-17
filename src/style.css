@@ -5,3 +5,6 @@
 @media(max-width:600px){.preflight{padding:16px}.preflight-grid{grid-template-columns:1fr;gap:8px}.preflight-warning{grid-column:auto}.price-row{font-size:11px}.preflight-contact{line-height:1.55}}
 
 .notice{background:#eef7ff;border:1px solid #d6e8ff;color:#24549b;border-radius:9px;padding:11px 13px;font-size:12px;margin:12px 0}.reset-submit{width:100%;justify-content:center;margin-top:10px}
+
+.top-links{display:flex;align-items:center;gap:12px}.channel-link{display:inline-flex;align-items:center;gap:5px;color:#bd2027;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap}.channel-link:hover{text-decoration:underline}
+@media(max-width:420px){.top-links{gap:8px}.channel-link,.admin-link{font-size:11px}.brand{gap:8px}.brandmark{width:34px;height:34px}}
