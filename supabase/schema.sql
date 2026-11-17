@@ -69,11 +69,11 @@ end; $$;
 revoke all on function public.submit_repair_request(jsonb) from public;
 grant execute on function public.submit_repair_request(jsonb) to anon, authenticated;
 
--- 관리자는 Supabase Auth 사용자 생성 후 app_metadata.role = 'admin'을 서버 측에서 지정하세요.
-create policy "Admins read requests" on public.repair_requests for select to authenticated
-using ((auth.jwt()->'app_metadata'->>'role') = 'admin');
-create policy "Admins update requests" on public.repair_requests for update to authenticated
-using ((auth.jwt()->'app_metadata'->>'role') = 'admin')
-with check ((auth.jwt()->'app_metadata'->>'role') = 'admin');
-create policy "Admins read batteries" on public.repair_batteries for select to authenticated
-using ((auth.jwt()->'app_metadata'->>'role') = 'admin');
+-- Only the explicitly selected, authenticated admin email can read/update customer records.
+create policy "MayDay admin email can read requests" on public.repair_requests for select to authenticated
+using ((auth.jwt()->>'email') = 'maydaycom030@gmail.com');
+create policy "MayDay admin email can update requests" on public.repair_requests for update to authenticated
+using ((auth.jwt()->>'email') = 'maydaycom030@gmail.com')
+with check ((auth.jwt()->>'email') = 'maydaycom030@gmail.com');
+create policy "MayDay admin email can read batteries" on public.repair_batteries for select to authenticated
+using ((auth.jwt()->>'email') = 'maydaycom030@gmail.com');
