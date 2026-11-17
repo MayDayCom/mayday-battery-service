@@ -8,8 +8,13 @@ const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 const db: SupabaseClient | null = url && key ? createClient(url, key) : null;
 const ADMIN_EMAIL = 'maydaycom030@gmail.com';
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim() || '';
 const statuses = ['접수', '답장완료', '수리중', '수리완료'];
 
+type GoogleTokenResponse = { access_token?: string; error?: string; error_description?: string };
+type GoogleTokenClient = { requestAccessToken: (options?: { prompt?: string }) => void };
+type GoogleIdentity = { accounts?: { oauth2?: { initTokenClient: (options: { client_id: string; scope: string; callback: (response: GoogleTokenResponse) => void; error_callback?: (error: { message?: string }) => void }) => GoogleTokenClient } };
+declare global { interface Window { google?: GoogleIdentity } }
 type Page = 'request' | 'admin' | 'setup';
 function routeFromHash(): Page {
   const params = new URLSearchParams(location.hash.replace(/^#/, ''));
@@ -53,7 +58,7 @@ function RequestForm(){
  </form></>
 }
 
-function mailReplyHref(r: RequestRow) {
+function buildReplyEmail(r: RequestRow) {
  const batteryText=r.battery_details||(r.batteries||[]).map(b=>[b.brand,b.voltage,b.capacity,b.model,b.quantity>1?b.quantity+'개':''].filter(Boolean).join(' ')).join(', ')||'기재 없음';
  const extraText=r.extra_request||'없음';
  const costText=r.repair_cost!==null&&r.repair_cost!==undefined?r.repair_cost.toLocaleString('ko-KR')+'원':'[예상 수리비를 작성해주세요.]';
@@ -88,13 +93,48 @@ function mailReplyHref(r: RequestRow) {
   '- 배터리스트 메이데이 드림',
   '- 공식 유튜브: https://youtube.com/@batterist_mayday','',
   '[이 안내문은 메이데이 AI 비서가 작성하였습니다.]'
- ].join('\n');
- return 'mailto:'+r.email+'?subject='+encodeURIComponent('[배터리스트 메이데이] 작업 의뢰 신청 답변 드립니다. ('+r.name+' 고객님)')+'&body='+encodeURIComponent(body);
+ ].join('\\n');
+ return { subject: '[배터리스트 메이데이] 작업 의뢰 신청 답변 드립니다. ('+r.name+' 고객님)', body };
+}
+
+function toBase64Utf8(value: string) {
+ const bytes=new TextEncoder().encode(value);let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary);
+}
+
+function toBase64Url(value: string) {
+ return toBase64Utf8(value).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
+}
+
+function requestGmailAccessToken(): Promise<string> {
+ return new Promise((resolve,reject)=>{
+  const oauth2=window.google?.accounts?.oauth2;
+  if(!GOOGLE_CLIENT_ID||!oauth2){reject(new Error('Google OAuth 설정을 불러오지 못했습니다.'));return;}
+  const client=oauth2.initTokenClient({client_id:GOOGLE_CLIENT_ID,scope:'https://www.googleapis.com/auth/gmail.compose',callback:(response)=>{if(response.error||!response.access_token){reject(new Error(response.error_description||response.error||'Google 계정 승인이 필요합니다.'));return;}resolve(response.access_token);},error_callback:(error)=>reject(new Error(error.message||'Google 계정 연결에 실패했습니다.'))});
+  client.requestAccessToken({prompt:'select_account'});
+ });
 }
 function Admin(){
- const [session,setSession]=useState<boolean|null>(null),[userEmail,setUserEmail]=useState(''),[email,setEmail]=useState(ADMIN_EMAIL),[password,setPassword]=useState(''),[notice,setNotice]=useState(''),[rows,setRows]=useState<RequestRow[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[filter,setFilter]=useState('전체'),[search,setSearch]=useState('');
+ const [session,setSession]=useState<boolean|null>(null),[userEmail,setUserEmail]=useState(''),[email,setEmail]=useState(ADMIN_EMAIL),[password,setPassword]=useState(''),[notice,setNotice]=useState(''),[rows,setRows]=useState<RequestRow[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[filter,setFilter]=useState('전체'),[search,setSearch]=useState(''),[googleReady,setGoogleReady]=useState(false),[googleScriptError,setGoogleScriptError]=useState(''),[savingDraftId,setSavingDraftId]=useState(''),[gmailNotice,setGmailNotice]=useState(''),[gmailError,setGmailError]=useState('');
  useEffect(()=>{if(!db)return;db.auth.getSession().then(({data})=>{setSession(!!data.session);setUserEmail(data.session?.user.email||'');});const {data:{subscription}}=db.auth.onAuthStateChange((_e,s)=>{setSession(!!s);setUserEmail(s?.user.email||'');});return()=>subscription.unsubscribe();},[]);
- async function signIn(e:React.FormEvent){e.preventDefault();setError('');setNotice('');if(!db)return;const {error}=await db.auth.signInWithPassword({email,password});if(error)setError('로그인에 실패했습니다. 관리자 계정을 확인해주세요.');else{setPassword('');await load();}}
+ useEffect(()=>{if(!GOOGLE_CLIENT_ID){setGoogleScriptError('Gmail OAuth Client ID 설정이 필요합니다.');return;}if(window.google?.accounts?.oauth2){setGoogleReady(true);return;}let script=document.querySelector<HTMLScriptElement>('script[data-google-identity]');if(!script){script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.dataset.googleIdentity='true';document.head.appendChild(script);}const onLoad=()=>setGoogleReady(true);const onError=()=>setGoogleScriptError('Google 연결 기능을 불러오지 못했습니다.');script.addEventListener('load',onLoad);script.addEventListener('error',onError);return()=>{script?.removeEventListener('load',onLoad);script?.removeEventListener('error',onError);};},[]);
+ async function createGmailDraft(r: RequestRow){
+ setGmailError('');setGmailNotice('');
+ if(!GOOGLE_CLIENT_ID){setGmailError('Gmail 연결 설정이 필요합니다. README의 Google OAuth 설정을 먼저 완료해주세요.');return;}
+ if(!googleReady){setGmailError(googleScriptError||'Google 연결 기능을 준비 중입니다. 잠시 후 다시 눌러주세요.');return;}
+ if(!r.email){setGmailError('고객 이메일이 없습니다.');return;}
+ setSavingDraftId(r.id);
+ try{
+  const accessToken=await requestGmailAccessToken();
+  const {subject,body}=buildReplyEmail(r);
+  const message=['To: '+r.email,'Subject: =?UTF-8?B?'+toBase64Utf8(subject)+'?=','MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',toBase64Utf8(body)].join(String.fromCharCode(13,10));
+  const response=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({message:{raw:toBase64Url(message)}})});
+  const result=await response.json().catch(()=>null);
+  if(!response.ok)throw new Error(result?.error?.message||'Gmail 초안을 저장하지 못했습니다.');
+  setGmailNotice(r.name+' 고객 답장 초안을 Gmail 임시보관함에 저장했습니다. 내용을 확인한 뒤 직접 전송해주세요.');
+ }catch(error){setGmailError(error instanceof Error?error.message:'Gmail 초안 저장에 실패했습니다.');}
+ finally{setSavingDraftId('');}
+}
+async function signIn(e:React.FormEvent){e.preventDefault();setError('');setNotice('');if(!db)return;const {error}=await db.auth.signInWithPassword({email,password});if(error)setError('로그인에 실패했습니다. 관리자 계정을 확인해주세요.');else{setPassword('');await load();}}
  async function sendReset(){setError('');setNotice('');if(!db)return;const target=email.trim();if(!target){setError('관리자 이메일을 입력해주세요.');return;}const redirectTo=window.location.origin+window.location.pathname;const {error}=await db.auth.resetPasswordForEmail(target,{redirectTo});if(error)setError('재설정 메일을 보내지 못했습니다. 잠시 후 다시 시도해주세요.');else setNotice('재설정 메일을 요청했습니다. 받은편지함과 스팸함을 확인해주세요.');}
  async function load(){if(!db)return;setLoading(true);const {data,error}=await db.from('repair_requests').select('*,batteries:repair_batteries(*)').order('created_at',{ascending:false}).limit(500);if(error)setError('목록을 불러오지 못했습니다. 관리자 권한을 확인해주세요.');else setRows((data||[]) as RequestRow[]);setLoading(false);}
  useEffect(()=>{if(session)void load();},[session]);
@@ -105,7 +145,7 @@ function Admin(){
  if(session===null)return <section className="card admin-login">확인 중…</section>;
  if(!session)return <section className="card admin-login"><div className="eyebrow"><ShieldCheck size={14}/> SECURE ADMIN</div><h1>관리자 로그인</h1><p>등록된 관리자 계정으로 로그인하세요.</p><form onSubmit={signIn}><Field label="이메일"><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></Field><Field label="비밀번호"><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></Field>{error&&<div className="error">{error}</div>}{notice&&<div className="notice" role="status">{notice}</div>}<button className="primary submit">로그인</button><button type="button" className="secondary reset-submit" onClick={()=>void sendReset()}>비밀번호 재설정 메일 보내기</button></form></section>;
  if(userEmail.toLowerCase()!==ADMIN_EMAIL)return <section className="card admin-login"><h1>관리자 계정이 아닙니다</h1><p>등록된 관리자 이메일로 로그인해주세요.</p><button className="secondary" onClick={()=>void db?.auth.signOut()}>로그아웃</button></section>;
- return <section className="admin"><div className="admin-title"><div><div className="eyebrow"><ShieldCheck size={14}/> MAYDAY ADMIN</div><h1>수리 의뢰 관리</h1><p>고객별 배터리와 작업 상태를 관리합니다.</p></div><div className="admin-actions"><button className="secondary" onClick={()=>{location.hash='password';}}><KeyRound size={16}/> 비밀번호 설정</button><button className="secondary" onClick={logout}><LogOut size={16}/> 로그아웃</button></div></div><div className="toolbar"><label className="search"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="고객·연락처·배터리 검색"/></label><select value={filter} onChange={e=>setFilter(e.target.value)}>{['전체',...statuses].map(s=><option key={s}>{s}</option>)}</select><button className="secondary" onClick={()=>void load()}>새로고침</button></div>{error&&<div className="error">{error}</div>}{loading?<p className="empty">불러오는 중…</p>:filtered.length===0?<p className="empty">표시할 의뢰가 없습니다.</p>:<div className="request-list">{filtered.map(r=><article className="request-card" key={r.id}><div className="request-top"><div><span className="date">{new Date(r.created_at).toLocaleString('ko-KR')}</span><h2>{r.name} <small>{r.phone}</small></h2><p>{r.address}</p>{r.email&&<div className="email-row"><a className="email-address" href={`mailto:${r.email}`}>{r.email}</a><a className="reply-link" href={mailReplyHref(r)}><Mail size={14}/> 답장 초안</a></div>}</div><select className="status-select" value={r.status} onChange={e=>void change(r.id,'status',e.target.value)}>{statuses.map(s=><option key={s}>{s}</option>)}</select></div><div className="request-batteries">{r.battery_details?<div><Battery size={15}/><span><b>배터리 정보</b><small className="battery-description">{r.battery_details}</small></span></div>:(r.batteries||[]).map((b,i)=><div key={i}><Battery size={15}/><span><b>{[b.brand,b.model].filter(Boolean).join(' ')||'배터리 정보 없음'}</b><small>{[b.voltage,b.capacity].filter(Boolean).join(' · ')}{([b.brand,b.voltage,b.capacity].some(Boolean)||b.quantity>1)?` · ${b.quantity}개`:''}</small></span></div>)}</div><div className="detail"><b>{r.repair_option}</b><p>{r.symptoms}</p>{r.extra_request&&<p className="extra">추가 요청: {r.extra_request}</p>}</div><div className="admin-edit"><label>수리비<input type="number" min="0" value={r.repair_cost??''} placeholder="원" onChange={e=>setRows(a=>a.map(x=>x.id===r.id?{...x,repair_cost:e.target.value===''?null:Number(e.target.value)}:x))} onBlur={e=>void change(r.id,'repair_cost',e.target.value===''?null:Number(e.target.value))}/><span>원</span></label><label className="note-label">관리 메모<textarea rows={2} value={r.admin_note||''} placeholder="내부 메모" onChange={e=>setRows(a=>a.map(x=>x.id===r.id?{...x,admin_note:e.target.value}:x))} onBlur={e=>void change(r.id,'admin_note',e.target.value||null)}/></label></div></article>)}</div>}</section>
+ return <section className="admin"><div className="admin-title"><div><div className="eyebrow"><ShieldCheck size={14}/> MAYDAY ADMIN</div><h1>수리 의뢰 관리</h1><p>고객별 배터리와 작업 상태를 관리합니다.</p></div><div className="admin-actions"><button className="secondary" onClick={()=>{location.hash='password';}}><KeyRound size={16}/> 비밀번호 설정</button><button className="secondary" onClick={logout}><LogOut size={16}/> 로그아웃</button></div></div><div className="toolbar"><label className="search"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="고객·연락처·배터리 검색"/></label><select value={filter} onChange={e=>setFilter(e.target.value)}>{['전체',...statuses].map(s=><option key={s}>{s}</option>)}</select><button className="secondary" onClick={()=>void load()}>새로고침</button></div>{googleScriptError&&<div className="notice" role="status">{googleScriptError}</div>}{gmailError&&<div className="error" role="alert">{gmailError}</div>}{gmailNotice&&<div className="notice" role="status">{gmailNotice}</div>}{error&&<div className="error">{error}</div>}{loading?<p className="empty">불러오는 중…</p>:filtered.length===0?<p className="empty">표시할 의뢰가 없습니다.</p>:<div className="request-list">{filtered.map(r=><article className="request-card" key={r.id}><div className="request-top"><div><span className="date">{new Date(r.created_at).toLocaleString('ko-KR')}</span><h2>{r.name} <small>{r.phone}</small></h2><p>{r.address}</p>{r.email&&<div className="email-row"><a className="email-address" href={`mailto:${r.email}`}>{r.email}</a><button type="button" className="reply-link" disabled={!googleReady||savingDraftId===r.id} onClick={()=>void createGmailDraft(r)}><Mail size={14}/> {savingDraftId===r.id?"저장 중…":"Gmail 초안 저장"}</button></div>}</div><select className="status-select" value={r.status} onChange={e=>void change(r.id,'status',e.target.value)}>{statuses.map(s=><option key={s}>{s}</option>)}</select></div><div className="request-batteries">{r.battery_details?<div><Battery size={15}/><span><b>배터리 정보</b><small className="battery-description">{r.battery_details}</small></span></div>:(r.batteries||[]).map((b,i)=><div key={i}><Battery size={15}/><span><b>{[b.brand,b.model].filter(Boolean).join(' ')||'배터리 정보 없음'}</b><small>{[b.voltage,b.capacity].filter(Boolean).join(' · ')}{([b.brand,b.voltage,b.capacity].some(Boolean)||b.quantity>1)?` · ${b.quantity}개`:''}</small></span></div>)}</div><div className="detail"><b>{r.repair_option}</b><p>{r.symptoms}</p>{r.extra_request&&<p className="extra">추가 요청: {r.extra_request}</p>}</div><div className="admin-edit"><label>수리비<input type="number" min="0" value={r.repair_cost??''} placeholder="원" onChange={e=>setRows(a=>a.map(x=>x.id===r.id?{...x,repair_cost:e.target.value===''?null:Number(e.target.value)}:x))} onBlur={e=>void change(r.id,'repair_cost',e.target.value===''?null:Number(e.target.value))}/><span>원</span></label><label className="note-label">관리 메모<textarea rows={2} value={r.admin_note||''} placeholder="내부 메모" onChange={e=>setRows(a=>a.map(x=>x.id===r.id?{...x,admin_note:e.target.value}:x))} onBlur={e=>void change(r.id,'admin_note',e.target.value||null)}/></label></div></article>)}</div>}</section>
 }
 function Section({title,caption,children}:{title:string;caption:string;children:React.ReactNode}){return <section className="form-section"><div className="section-title"><h2>{title}</h2><p>{caption}</p></div>{children}</section>}
 function Field({label,required,children}:{label:string;required?:boolean;children:React.ReactNode}){return <label className="field"><span>{label}{required&&<i> *</i>}</span>{children}</label>}
