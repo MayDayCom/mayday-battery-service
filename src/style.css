@@ -180,3 +180,41 @@ footer{padding:24px 0;text-align:center;color:#7e888e;font-size:11px}
   .success{margin:34px auto;padding:30px 20px}
   footer{padding:20px 0}
 }
+
+
+/* Desktop: widen navigation and admin, keep the request form easy to scan. */
+@media (min-width: 601px) {
+  .shell{max-width:1160px;padding-right:32px;padding-left:32px}
+  .top{min-height:78px}
+  .hero,.preflight,.form{max-width:940px;margin-right:auto;margin-left:auto}
+  .hero{margin-top:12px;margin-bottom:18px;padding:30px 34px 28px}
+  .hero h1{font-size:32px}
+  .hero p{font-size:15px}
+  .preflight{padding:22px 24px}
+  .preflight-grid{gap:12px}
+  .preflight-block{padding:15px 16px}
+  .preflight-block h3{font-size:13px}
+  .price-row{font-size:12px}
+  .price-row b{font-size:12px}
+  .preflight-note,.preflight-warning p{font-size:11px}
+  .form{padding-right:34px;padding-left:34px}
+  .form-section{padding-top:25px;padding-bottom:25px}
+  .section-title h2{font-size:17px}
+  .section-title p{font-size:13px}
+  .field>span{font-size:13px}
+  .field input,.field textarea,.field select{font-size:14px}
+  .admin{padding-top:22px}
+  .admin-title{margin-top:12px;margin-bottom:25px}
+  .request-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:14px}
+  .request-card{height:100%}
+}
+@media (min-width: 900px) {
+  .top-links{gap:22px}
+  .channel-link,.admin-link{font-size:13px}
+  .request-top h2{font-size:17px}
+  .request-batteries{gap:7px}
+}
+@media (min-width: 601px) and (max-width: 900px) {
+  .shell{padding-right:22px;padding-left:22px}
+  .request-list{grid-template-columns:1fr}
+}
