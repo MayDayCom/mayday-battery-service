@@ -312,3 +312,28 @@ footer{padding:24px 0;text-align:center;color:#7e888e;font-size:11px}
   .admin-edit{border-color:#465155}
   .admin-edit label{color:#d3dcdb}
 }
+
+
+/* Desktop minimum text size for small labels and supporting copy. */
+@media (min-width:601px) {
+  .brand small,
+  .eyebrow,
+  .preflight-heading p,
+  .preflight-note,
+  .preflight-warning p,
+  .preflight-contact,
+  .date,
+  .request-top p,
+  .request-top h2 small,
+  .request-batteries b,
+  .request-batteries small,
+  .detail,
+  .admin-edit label,
+  .secure-note,
+  footer,
+  .privacy-copy,
+  .packing-note,
+  .youtube-help,
+  .youtube-line>span,
+  .youtube-verify {font-size:12px}
+}
