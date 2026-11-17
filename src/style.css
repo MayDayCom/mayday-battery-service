@@ -257,3 +257,14 @@ footer{padding:24px 0;text-align:center;color:#7e888e;font-size:11px}
   .admin-edit label{font-size:12px}
   .admin-edit input,.admin-edit textarea{font-size:13px}
 }
+
+
+.youtube-help{display:block;color:#58656d;font-size:11px;line-height:1.55;font-weight:400}
+.youtube-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px;color:#364953!important}
+.youtube-line>span{color:#68757b;font-size:11px;font-weight:600}
+.youtube-verify{display:inline-flex;align-items:center;gap:5px;margin-left:6px;color:#355b48;font-size:11px;font-weight:600;white-space:nowrap}
+.youtube-verify input{width:15px;height:15px;accent-color:#426c56}
+@media (min-width:601px){
+  .youtube-help{font-size:12px}
+  .youtube-line>span,.youtube-verify{font-size:12px}
+}
