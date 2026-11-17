@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+500;600;700;800&display=swap');
 
 :root{
   --ink:#202a34;
@@ -11,11 +11,11 @@
   --accent-soft:#f8eceb;
   --blue:#30495e;
   --blue-soft:#edf2f5;
-  font-family:'Noto Sans KR',system-ui,-apple-system,sans-serif;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
   color:var(--ink);
   background:var(--paper);
   font-synthesis:none;
-  text-rendering:optimizeLegibility;
+  text-rendering:auto;
 }
 *{box-sizing:border-box}
 body{margin:0;min-width:320px;background:var(--paper)}
@@ -230,4 +230,30 @@ footer{padding:24px 0;text-align:center;color:#7e888e;font-size:11px}
   font-size:12px;
   font-weight:600;
   line-height:1.65;
+}
+
+
+/* Desktop readability: favor crisp local Korean fonts and stronger small text. */
+@media (min-width: 601px) {
+  .brand small{font-size:12px;color:#58646c}
+  .eyebrow{font-size:12px}
+  .hero-pills{font-size:13px}
+  .preflight-heading p{font-size:13px;color:#59656c}
+  .price-row{font-size:13px;color:#46535b}
+  .price-row b{font-size:13px}
+  .preflight-note,.preflight-block:first-child .preflight-note{font-size:13px;line-height:1.65}
+  .preflight-contact{font-size:13px;color:#4e5d65}
+  .section-title p{font-size:13px;color:#56636b}
+  .field>span{font-size:14px;color:#38454c}
+  .privacy-copy{font-size:12px;color:#4d5a62;line-height:1.75}
+  .packing-note{font-size:12px;color:#5f5137}
+  .secure-note,footer{font-size:12px;color:#59656c}
+  .date{font-size:12px;color:#59656c}
+  .request-top p{font-size:12px;color:#4f5c64}
+  .request-batteries b{font-size:12px}
+  .request-batteries small{font-size:12px;color:#58656d}
+  .detail{font-size:12px}
+  .detail p{color:#46535b}
+  .admin-edit label{font-size:12px}
+  .admin-edit input,.admin-edit textarea{font-size:13px}
 }
