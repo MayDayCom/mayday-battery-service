@@ -337,3 +337,37 @@ footer{padding:24px 0;text-align:center;color:#7e888e;font-size:11px}
   .youtube-line>span,
   .youtube-verify {font-size:12px}
 }
+
+
+/* Mobile admin: keep request identity, status, and controls easy to scan. */
+@media (max-width:600px) {
+  .admin{padding-top:8px}
+  .admin-title{align-items:flex-start;flex-wrap:wrap;gap:12px;margin:8px 0 16px}
+  .admin-actions{display:flex;gap:8px;width:100%}
+  .admin-actions button{flex:1;justify-content:center;min-height:42px;padding:8px}
+  .toolbar select,.toolbar>.secondary{min-height:44px}
+  .request-list{gap:10px}
+  .request-card{padding:14px;border-radius:14px}
+  .request-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px}
+  .request-top>div{display:contents}
+  .request-top .date{grid-column:1;grid-row:1;align-self:center;font-size:11px}
+  .request-top .status-select{grid-column:2;grid-row:1;min-height:40px}
+  .request-top h2{grid-column:1/-1;grid-row:2;display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin:3px 0 5px;font-size:17px;line-height:1.35}
+  .request-top h2 small{display:block;font-size:13px}
+  .request-top p{grid-column:1/-1;margin:0;overflow-wrap:anywhere;font-size:12px}
+  .request-top p:nth-of-type(1){grid-row:3}
+  .request-top p:nth-of-type(2){grid-row:4}
+  .request-batteries{display:grid;grid-template-columns:1fr;gap:7px;margin:11px 0}
+  .request-batteries>div{align-items:flex-start;padding:10px 11px}
+  .request-batteries>div>span{min-width:0}
+  .request-batteries .battery-description{overflow-wrap:anywhere;font-size:12px}
+  .request-batteries b{font-size:12px}
+  .request-batteries small{font-size:12px}
+  .detail{font-size:13px}
+  .detail p{font-size:13px;line-height:1.6}
+  .detail .extra{padding:8px 10px;border-left:3px solid #c7a36a;border-radius:6px;background:#fff9ed}
+  .admin-edit{gap:10px}
+  .admin-edit label:first-child{max-width:none}
+  .admin-edit input,.admin-edit textarea{min-height:44px}
+  .admin-edit textarea{min-height:76px}
+}
