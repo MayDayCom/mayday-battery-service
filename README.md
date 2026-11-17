@@ -1,3 +1,5 @@
+[배터리 수리 의뢰서](https://maydaycom.github.io/mayday-battery-service/)
+
 # MayDay Battery Service
 
 PC와 모바일에서 사용하는 메이데이컴퓨터 배터리 수리 의뢰서와 관리자 화면입니다. 기존 Google Forms 항목(성함, 연락처, 이메일, 주소, 배터리·증상, 수리/리필 선택, 추가 요청, 개인정보 동의)을 유지합니다. 우편번호는 받지 않습니다. 배터리 정보는 제조사·전압·용량·모델명·수량을 한 입력란에 자유롭게 적습니다.
