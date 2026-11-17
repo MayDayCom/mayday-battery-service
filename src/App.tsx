@@ -11,7 +11,7 @@ const ADMIN_EMAIL = 'maydaycom030@gmail.com';
 const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim() || '';
 const statuses = ['접수', '답장완료', '수리중', '수리완료'];
 
-type GoogleTokenResponse = { access_token?: string; error?: string; error_description?: string };
+type GoogleTokenResponse = { access_token?: string; expires_in?: number; error?: string; error_description?: string };
 type GoogleTokenClient = { requestAccessToken: (options?: { prompt?: string }) => void };
 type GoogleIdentity = { accounts?: { oauth2?: { initTokenClient: (options: { client_id: string; scope: string; callback: (response: GoogleTokenResponse) => void; error_callback?: (error: { message?: string }) => void }) => GoogleTokenClient } };
 declare global { interface Window { google?: GoogleIdentity } }
@@ -105,16 +105,16 @@ function toBase64Url(value: string) {
  return toBase64Utf8(value).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
 }
 
-function requestGmailAccessToken(): Promise<string> {
+function requestGmailAccessToken(): Promise<{accessToken:string;expiresAt:number}> {
  return new Promise((resolve,reject)=>{
   const oauth2=window.google?.accounts?.oauth2;
   if(!GOOGLE_CLIENT_ID||!oauth2){reject(new Error('Google OAuth 설정을 불러오지 못했습니다.'));return;}
-  const client=oauth2.initTokenClient({client_id:GOOGLE_CLIENT_ID,scope:'https://www.googleapis.com/auth/gmail.compose',callback:(response)=>{if(response.error||!response.access_token){reject(new Error(response.error_description||response.error||'Google 계정 승인이 필요합니다.'));return;}resolve(response.access_token);},error_callback:(error)=>reject(new Error(error.message||'Google 계정 연결에 실패했습니다.'))});
+  const client=oauth2.initTokenClient({client_id:GOOGLE_CLIENT_ID,scope:'https://www.googleapis.com/auth/gmail.compose',callback:(response)=>{if(response.error||!response.access_token){reject(new Error(response.error_description||response.error||'Google 계정 승인이 필요합니다.'));return;}resolve({accessToken:response.access_token,expiresAt:Date.now()+(Number(response.expires_in)||3600)*1000});},error_callback:(error)=>reject(new Error(error.message||'Google 계정 연결에 실패했습니다.'))});
   client.requestAccessToken({prompt:'select_account'});
  });
 }
 function Admin(){
- const [session,setSession]=useState<boolean|null>(null),[userEmail,setUserEmail]=useState(''),[email,setEmail]=useState(ADMIN_EMAIL),[password,setPassword]=useState(''),[notice,setNotice]=useState(''),[rows,setRows]=useState<RequestRow[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[filter,setFilter]=useState('전체'),[search,setSearch]=useState(''),[googleReady,setGoogleReady]=useState(false),[googleScriptError,setGoogleScriptError]=useState(''),[savingDraftId,setSavingDraftId]=useState(''),[gmailNotice,setGmailNotice]=useState(''),[gmailError,setGmailError]=useState('');
+ const [session,setSession]=useState<boolean|null>(null),[userEmail,setUserEmail]=useState(''),[email,setEmail]=useState(ADMIN_EMAIL),[password,setPassword]=useState(''),[notice,setNotice]=useState(''),[rows,setRows]=useState<RequestRow[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[filter,setFilter]=useState('전체'),[search,setSearch]=useState(''),[googleReady,setGoogleReady]=useState(false),[googleScriptError,setGoogleScriptError]=useState(''),[gmailAccess,setGmailAccess]=useState<{accessToken:string;expiresAt:number}|null>(null),[savingDraftId,setSavingDraftId]=useState(''),[gmailNotice,setGmailNotice]=useState(''),[gmailError,setGmailError]=useState('');
  useEffect(()=>{if(!db)return;db.auth.getSession().then(({data})=>{setSession(!!data.session);setUserEmail(data.session?.user.email||'');});const {data:{subscription}}=db.auth.onAuthStateChange((_e,s)=>{setSession(!!s);setUserEmail(s?.user.email||'');});return()=>subscription.unsubscribe();},[]);
  useEffect(()=>{if(!GOOGLE_CLIENT_ID){setGoogleScriptError('Gmail OAuth Client ID 설정이 필요합니다.');return;}if(window.google?.accounts?.oauth2){setGoogleReady(true);return;}let script=document.querySelector<HTMLScriptElement>('script[data-google-identity]');if(!script){script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.defer=true;script.dataset.googleIdentity='true';document.head.appendChild(script);}const onLoad=()=>setGoogleReady(true);const onError=()=>setGoogleScriptError('Google 연결 기능을 불러오지 못했습니다.');script.addEventListener('load',onLoad);script.addEventListener('error',onError);return()=>{script?.removeEventListener('load',onLoad);script?.removeEventListener('error',onError);};},[]);
  async function createGmailDraft(r: RequestRow){
@@ -124,7 +124,7 @@ function Admin(){
  if(!r.email){setGmailError('고객 이메일이 없습니다.');return;}
  setSavingDraftId(r.id);
  try{
-  const accessToken=await requestGmailAccessToken();
+  const accessToken=gmailAccess&&gmailAccess.expiresAt>Date.now()+30000?gmailAccess.accessToken:(await requestGmailAccessToken().then(value=>{setGmailAccess(value);return value.accessToken;}));
   const {subject,body}=buildReplyEmail(r);
   const message=['To: '+r.email,'Subject: =?UTF-8?B?'+toBase64Utf8(subject)+'?=','MIME-Version: 1.0','Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',toBase64Utf8(body)].join(String.fromCharCode(13,10));
   const response=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},body:JSON.stringify({message:{raw:toBase64Url(message)}})});
