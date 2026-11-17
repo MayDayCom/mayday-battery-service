@@ -28,6 +28,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://wfisyxxlrxwdzfztgrmm.supabase.co
           VITE_SUPABASE_ANON_KEY: sb_publishable_P4KAk3tpBmETciLTTVByZg_67WgMeSe
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
