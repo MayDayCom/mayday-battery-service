@@ -9,24 +9,19 @@ PC와 모바일에서 사용하는 배터리스트 메이데이의 배터리 수
 ## Supabase 연결
 
 1. 새 Supabase DB에는 `supabase/schema.sql`을 실행합니다. 기존 DB에는 `supabase/migration_battery_details.sql`을 한 번 실행합니다.
-2. 기존 DB에는 `supabase/migration_youtube_verification.sql`도 실행해 유튜브 채널명과 구독 확인 항목을 추가합니다.
-3. 현재 연결 프로젝트는 `https://wfisyxxlrxwdzfztgrmm.supabase.co`입니다. `.env.example`의 URL과 publishable key를 사용하세요.
-4. 관리자는 `maydaycom030@gmail.com`으로 제한됩니다. Supabase Auth 초대 링크를 열고 앱의 비밀번호 설정 화면에서 암호를 만듭니다.
-5. `npm install` 후 `npm run dev`로 실행합니다. `npm run build`로 정적 배포 파일을 생성합니다.
-6. GitHub Pages 배포는 `.github/workflows/deploy.yml`을 사용합니다. Pages를 켜면 사이트가 인터넷에 공개됩니다.
+2. 현재 연결 프로젝트는 `https://wfisyxxlrxwdzfztgrmm.supabase.co`입니다. `.env.example`의 URL과 publishable key를 사용하세요.
+3. 관리자는 `maydaycom030@gmail.com`으로 제한됩니다. Supabase Auth 초대 링크를 열고 앱의 비밀번호 설정 화면에서 암호를 만듭니다.
+4. `npm install` 후 `npm run dev`로 실행합니다. `npm run build`로 정적 배포 파일을 생성합니다.
+5. GitHub Pages 배포는 `.github/workflows/deploy.yml`을 사용합니다. Pages를 켜면 사이트가 인터넷에 공개됩니다.
 
 ## 개인정보·접근 제어
 
 - 의뢰 데이터는 RLS로 차단합니다. 비로그인 사용자는 목록을 읽지 못하며, 접수 전용 `submit_repair_request` 함수만 호출할 수 있습니다.
 - 관리자 화면은 Supabase Auth로 로그인하며, RLS는 인증된 JWT의 이메일이 `maydaycom030@gmail.com`과 일치할 때만 고객 데이터를 허용합니다.
 - 수리비, 처리 상태, 관리자 메모는 관리자만 수정할 수 있습니다.
-- 폼에서 유튜브 닉네임·채널명도 구독 확인 목적으로 수집하며, 개인정보 수집·이용 동의를 필수로 받고, 택배 발송 후 3개월 보유 기준을 안내합니다.
+- 신청서에서 유튜브 닉네임을 함께 받고, 개인정보 수집·이용 동의를 필수로 받습니다. 개인정보는 택배 발송 후 3개월까지 보유합니다.
 - 초대 URL 설정은 실제 배포 주소를 Supabase Auth의 Site URL과 허용 redirect URL에 등록한 뒤 초대 메일을 보내야 합니다.
 - `service_role` 키는 브라우저나 저장소에 넣지 마세요. 브라우저에는 publishable key만 사용합니다.
-
-## 유튜브 구독 확인
-
-신청서에 유튜브 닉네임 또는 `@핸들`을 받고, 관리자 화면에서 YouTube Studio와 대조해 확인 표시를 남깁니다. Studio의 최근 구독자 목록은 구독 공개 설정을 한 계정 중 최근 28일 내 구독한 계정만 표시하므로 모든 구독자를 자동으로 확인하지는 못합니다.
 
 ## 운영 참고
 
