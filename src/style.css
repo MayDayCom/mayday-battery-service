@@ -388,3 +388,6 @@ footer{padding:24px 0;text-align:center;color:#7e888e;font-size:11px}
   .email-address{flex:1 1 180px}
   .reply-link{min-height:40px;padding:8px 11px}
 }
+
+.reply-link{cursor:pointer}
+.reply-link:disabled{opacity:.55;cursor:not-allowed}
