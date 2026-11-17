@@ -88,7 +88,7 @@ function mailReplyHref(r: RequestRow) {
   '- 배터리스트 메이데이 드림',
   '- 공식 유튜브: https://youtube.com/@batterist_mayday','',
   '[이 안내문은 메이데이 AI 비서가 작성하였습니다.]'
- ].join('\\n');
+ ].join('\n');
  return 'mailto:'+r.email+'?subject='+encodeURIComponent('[배터리스트 메이데이] 작업 의뢰 신청 답변 드립니다. ('+r.name+' 고객님)')+'&body='+encodeURIComponent(body);
 }
 function Admin(){
