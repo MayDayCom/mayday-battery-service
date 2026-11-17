@@ -55,8 +55,41 @@ function RequestForm(){
 
 function mailReplyHref(r: RequestRow) {
  const batteryText=r.battery_details||(r.batteries||[]).map(b=>[b.brand,b.voltage,b.capacity,b.model,b.quantity>1?b.quantity+'개':''].filter(Boolean).join(' ')).join(', ')||'기재 없음';
- const body=[r.name+'님, 안녕하세요.','','배터리 수리 의뢰를 확인했습니다.','배터리: '+batteryText.slice(0,500),'요청 작업: '+r.repair_option,'증상: '+r.symptoms.slice(0,500),'','수리 가능 여부와 예상 비용을 확인한 뒤 다시 안내드리겠습니다.','','배터리스트 메이데이'].join('\n');
- return 'mailto:'+r.email+'?subject='+encodeURIComponent('배터리 수리 의뢰 답변 - '+r.name)+'&body='+encodeURIComponent(body);
+ const extraText=r.extra_request||'없음';
+ const costText=r.repair_cost!==null&&r.repair_cost!==undefined?r.repair_cost.toLocaleString('ko-KR')+'원':'[예상 수리비를 작성해주세요.]';
+ const body=[
+  '안녕하세요, '+r.name+' 고객님!',
+  '배터리 수리 및 리필 전문, 배터리스트 메이데이입니다.',
+  '소중한 작업 의뢰서를 보내주셔서 감사합니다.','',
+  '보내주신 의뢰 내용을 바탕으로 작업 안내를 드립니다.','',
+  '[작업 의뢰 요약]','',
+  '- 의뢰 제품: '+batteryText.slice(0,500),
+  '- 고장 증상: '+r.symptoms.slice(0,500),
+  '- 요청 사항: '+r.repair_option,
+  '- 추가 요청: '+extraText.slice(0,300),'',
+  '[예상 비용 및 작업 안내]','',
+  '고객님께서 요청하신 작업과 관련하여 다음과 같이 안내드립니다.','',
+  '1. 작업 가능 여부 및 안내',
+  '   [작업 가능 여부와 필요한 작업 내용을 작성해주세요.]',
+  '2. 예상 비용',
+  '   '+costText,'',
+  '※ 정확한 비용과 작업 가능 여부는 제품을 분해하여 정밀 점검한 후 확정됩니다. 추가 비용이 발생하는 경우 작업 전에 미리 연락드리겠습니다.','',
+  '[택배 발송 시 주의사항 - 필수 확인!]','',
+  '저희 작업실은 모든 소통을 이메일로만 진행하고 있습니다. 전화 상담은 불가능하오니 문의 사항은 이메일로 보내주시기 바랍니다.','',
+  '택배를 보내실 때 박스 내부에 아래 정보를 적은 메모를 반드시 동봉해 주세요.','',
+  '▶ 메모 필수 내용: 성함, 연락처, 받으실 주소, 배터리 고장 증상','',
+  '※ 내부 메모가 없을 경우 접수 확인이 어려워 착불 반송될 수 있으니 꼭 유의해 주세요!','',
+  '[보내실 주소]','',
+  '- 주소: 강원도 속초시 번영로 88, 메이데이컴퓨터',
+  '- 연락처: 010-2877-3079',
+  '- 이름: 민병호','',
+  '추가적인 문의 사항이 있으시다면 본 이메일로 회신해 주시기 바랍니다.','',
+  '감사합니다.','',
+  '- 배터리스트 메이데이 드림',
+  '- 공식 유튜브: https://youtube.com/@batterist_mayday','',
+  '[이 안내문은 메이데이 AI 비서가 작성하였습니다.]'
+ ].join('\\n');
+ return 'mailto:'+r.email+'?subject='+encodeURIComponent('[배터리스트 메이데이] 작업 의뢰 신청 답변 드립니다. ('+r.name+' 고객님)')+'&body='+encodeURIComponent(body);
 }
 function Admin(){
  const [session,setSession]=useState<boolean|null>(null),[userEmail,setUserEmail]=useState(''),[email,setEmail]=useState(ADMIN_EMAIL),[password,setPassword]=useState(''),[notice,setNotice]=useState(''),[rows,setRows]=useState<RequestRow[]>([]),[loading,setLoading]=useState(false),[error,setError]=useState(''),[filter,setFilter]=useState('전체'),[search,setSearch]=useState('');
